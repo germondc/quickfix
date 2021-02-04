@@ -351,7 +351,7 @@ func extractField(parsedFieldBytes *TagValue, buffer []byte) (remBytes []byte, e
 }
 
 func (m *Message) String() string {
-	if m.rawMessage != nil {
+	if m.rawMessage != nil && !m.Header.isDirty && !m.Body.isDirty && !m.Trailer.isDirty {
 		return m.rawMessage.String()
 	}
 
@@ -374,6 +374,7 @@ func (m *Message) build() []byte {
 }
 
 func (m *Message) cook() {
+	fmt.Println("cook start part 3")
 	bodyLength := m.Header.length() + m.Body.length() + m.Trailer.length()
 	m.Header.SetInt(tagBodyLength, bodyLength)
 	checkSum := (m.Header.total() + m.Body.total() + m.Trailer.total()) % 256

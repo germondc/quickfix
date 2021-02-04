@@ -39,6 +39,7 @@ func (t tagSort) Less(i, j int) bool { return t.compare(t.tags[i], t.tags[j]) }
 type FieldMap struct {
 	tagLookup map[Tag]field
 	tagSort
+	isDirty bool
 }
 
 // ascending tags
@@ -172,6 +173,7 @@ func (m *FieldMap) SetField(tag Tag, field FieldValueWriter) *FieldMap {
 func (m *FieldMap) SetBytes(tag Tag, value []byte) *FieldMap {
 	f := m.getOrCreate(tag)
 	initField(f, tag, value)
+	m.isDirty = true
 	return m
 }
 
@@ -193,6 +195,7 @@ func (m *FieldMap) SetString(tag Tag, value string) *FieldMap {
 
 //Clear purges all fields from field map
 func (m *FieldMap) Clear() {
+	m.isDirty = false
 	m.tags = m.tags[0:0]
 	for k := range m.tagLookup {
 		delete(m.tagLookup, k)
@@ -203,8 +206,11 @@ func (m *FieldMap) Clear() {
 func (m *FieldMap) CopyInto(to *FieldMap) {
 	to.tagLookup = make(map[Tag]field)
 	for tag, f := range m.tagLookup {
-		clone := make(field, 1)
-		clone[0] = f[0]
+		clone := make(field, len(f))
+		for i, val := range f {
+			clone[i] = val
+		}
+
 		to.tagLookup[tag] = clone
 	}
 	to.tags = make([]Tag, len(m.tags))
@@ -218,7 +224,7 @@ func (m *FieldMap) add(f field) {
 		m.tags = append(m.tags, t)
 	}
 
-	m.tagLookup[t] = f
+	m.tagLookup[t] = append(m.tagLookup[t], f[0])
 }
 
 func (m *FieldMap) getOrCreate(tag Tag) field {
