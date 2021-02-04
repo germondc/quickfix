@@ -374,7 +374,6 @@ func (m *Message) build() []byte {
 }
 
 func (m *Message) cook() {
-	fmt.Println("cook start part 3")
 	bodyLength := m.Header.length() + m.Body.length() + m.Trailer.length()
 	m.Header.SetInt(tagBodyLength, bodyLength)
 	checkSum := (m.Header.total() + m.Body.total() + m.Trailer.total()) % 256
