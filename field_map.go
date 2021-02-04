@@ -253,6 +253,7 @@ func (m *FieldMap) SetGroup(field FieldGroupWriter) *FieldMap {
 		m.tags = append(m.tags, field.Tag())
 	}
 	m.tagLookup[field.Tag()] = field.Write()
+	m.isDirty = true
 	return m
 }
 
