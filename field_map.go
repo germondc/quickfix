@@ -39,6 +39,7 @@ func (t tagSort) Less(i, j int) bool { return t.compare(t.tags[i], t.tags[j]) }
 type FieldMap struct {
 	tagLookup map[Tag]field
 	tagSort
+	fields  []field
 	isDirty bool
 }
 
@@ -51,6 +52,7 @@ func (m *FieldMap) init() {
 
 func (m *FieldMap) initWithOrdering(ordering tagOrder) {
 	m.tagLookup = make(map[Tag]field)
+	m.fields = make([]field, 0)
 	m.compare = ordering
 }
 
@@ -154,6 +156,13 @@ func (m FieldMap) GetGroup(parser FieldGroupReader) MessageRejectError {
 		return ConditionallyRequiredFieldMissing(parser.Tag())
 	}
 
+	for k, v := range m.tags {
+		if v == parser.Tag() {
+			f = m.fields[k]
+			break
+		}
+	}
+
 	if _, err := parser.Read(f); err != nil {
 		if msgRejErr, ok := err.(MessageRejectError); ok {
 			return msgRejErr
@@ -200,6 +209,7 @@ func (m *FieldMap) Clear() {
 	for k := range m.tagLookup {
 		delete(m.tagLookup, k)
 	}
+	m.fields = m.fields[0:0]
 }
 
 //CopyInto overwrites the given FieldMap with this one
@@ -216,15 +226,15 @@ func (m *FieldMap) CopyInto(to *FieldMap) {
 	to.tags = make([]Tag, len(m.tags))
 	copy(to.tags, m.tags)
 	to.compare = m.compare
+	to.fields = make([]field, len(m.fields))
+	copy(to.fields, m.fields)
 }
 
 func (m *FieldMap) add(f field) {
 	t := fieldTag(f)
-	if _, ok := m.tagLookup[t]; !ok {
-		m.tags = append(m.tags, t)
-	}
-
+	m.tags = append(m.tags, t)
 	m.tagLookup[t] = append(m.tagLookup[t], f[0])
+	m.fields = append(m.fields, f)
 }
 
 func (m *FieldMap) getOrCreate(tag Tag) field {
@@ -236,6 +246,7 @@ func (m *FieldMap) getOrCreate(tag Tag) field {
 	f := make(field, 1)
 	m.tagLookup[tag] = f
 	m.tags = append(m.tags, tag)
+	m.fields = append(m.fields, f)
 	return f
 }
 
@@ -252,7 +263,9 @@ func (m *FieldMap) SetGroup(field FieldGroupWriter) *FieldMap {
 	if !ok {
 		m.tags = append(m.tags, field.Tag())
 	}
-	m.tagLookup[field.Tag()] = field.Write()
+	f := field.Write()
+	m.tagLookup[field.Tag()] = f
+	m.fields = append(m.fields, f)
 	m.isDirty = true
 	return m
 }
